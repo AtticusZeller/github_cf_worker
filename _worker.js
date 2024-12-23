@@ -14,7 +14,7 @@ const index = {
       [`assets.${domain}`]: "github.githubassets.com",
       [`raw.${domain}`]: "raw.githubusercontent.com",
       [`download.${domain}`]: "codeload.github.com",
-      [`object.${domain}`]: "objects.githubusercontent.com",
+      [`objects.${domain}`]: "objects.githubusercontent.com",
       [`media.${domain}`]: "media.githubusercontent.com",
       [`gist.${domain}`]: "gist.github.com"
     };
