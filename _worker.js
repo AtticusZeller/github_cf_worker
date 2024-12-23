@@ -10,6 +10,7 @@ const index = {
     if (url.pathname === "/robots.txt")
       return new Response("User-agent: *\nDisallow: /", { status: 200 });
     domainMaps = {
+      [`release.${domain}`]: "github.com",  // for github release
       [`assets.${domain}`]: "github.githubassets.com",
       [`raw.${domain}`]: "raw.githubusercontent.com",
       [`download.${domain}`]: "codeload.github.com",
