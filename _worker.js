@@ -80,13 +80,50 @@ function getNewRequest(url, request) {
 }
 async function proxy(url, request, env) {
   try {
+    // 特殊处理 release 下载链接
+    if (
+      url.host === "github.com" &&
+      url.pathname.includes("/releases/download/")
+    ) {
+      // 先获取 GitHub 的重定向
+      const firstResponse = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          Accept: "application/octet-stream",
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+        redirect: "manual",
+      });
+
+      // 如果是重定向响应
+      if (firstResponse.status === 302) {
+        const redirectUrl = new URL(firstResponse.headers.get("location"));
+        // 替换域名
+        if (redirectUrl.host in reverseDomainMaps) {
+          redirectUrl.host = reverseDomainMaps[redirectUrl.host];
+          // 返回重定向响应
+          return new Response(null, {
+            status: 302,
+            headers: {
+              Location: redirectUrl.toString(),
+              "Cache-Control": "no-store, no-cache, must-revalidate",
+              Pragma: "no-cache",
+            },
+          });
+        }
+      }
+    }
+
+    // 常规请求处理
     const res = await fetch(url.toString(), request);
     const headers = res.headers;
     const newHeaders = new Headers(headers);
     const status = res.status;
-    newHeaders.set("Cache-Control", "no-cache, no-store, must-revalidate");
+
+    newHeaders.set("Cache-Control", "no-store, no-cache, must-revalidate");
     newHeaders.set("Pragma", "no-cache");
-    newHeaders.set("Expires", "0");
+
     if (newHeaders.has("location")) {
       const loc = newHeaders.get("location");
       if (loc) {
@@ -101,11 +138,13 @@ async function proxy(url, request, env) {
         }
       }
     }
+
     newHeaders.set("access-control-expose-headers", "*");
     newHeaders.set("access-control-allow-origin", "*");
     newHeaders.delete("content-security-policy");
     newHeaders.delete("content-security-policy-report-only");
     newHeaders.delete("clear-site-data");
+
     if (res.headers.get("content-type")?.indexOf("text/html") !== -1) {
       const body = await res.text();
       const regAll = new RegExp(
@@ -123,6 +162,7 @@ async function proxy(url, request, env) {
         .replace(/integrity=\".*?\"/g, "");
       return new Response(newBody, { status, headers: newHeaders });
     }
+
     return new Response(res.body, { status, headers: newHeaders });
   } catch (e) {
     return new Response(e.message, { status: 500 });
